@@ -20,6 +20,7 @@ function blankClock(order: number): Clock {
     enabled: true,
     visibility: 'child',
     soundEnabled: false,
+    ringtoneId: 'gentleChime',
     colorId: 'blue',
     completedDates: [],
     order,

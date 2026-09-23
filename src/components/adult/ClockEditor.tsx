@@ -3,6 +3,7 @@ import type { Clock, RepeatKind, ClockRole, ScheduleType } from '../../types';
 import type { Profile } from '../../types';
 import { COLOR_SWATCHES } from '../../store/defaultData';
 import { DAY_NAMES } from '../../types';
+import { RINGTONES, playRingtone, getRingtone } from '../../engine/sound';
 
 export interface ClockEditorProps {
   initial: Clock;
@@ -172,7 +173,7 @@ export function ClockEditor({ initial, profiles, isNew, onSave, onCancel, onDele
         </div>
 
         <div className="switch-row">
-          <span>Play a gentle sound when ready</span>
+          <span>Play a sound when ready</span>
           <button
             type="button"
             className={`switch${clock.soundEnabled ? ' is-on' : ''}`}
@@ -183,6 +184,33 @@ export function ClockEditor({ initial, profiles, isNew, onSave, onCancel, onDele
             <span className="switch-knob" />
           </button>
         </div>
+
+        {clock.soundEnabled && (
+          <div className="form-row">
+            <label htmlFor="clock-ringtone">Ringer sound</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select
+                id="clock-ringtone"
+                value={clock.ringtoneId}
+                onChange={(e) => set('ringtoneId', e.target.value)}
+                style={{ flex: 1 }}
+              >
+                {RINGTONES.filter((r) => r.id !== 'none').map((r) => (
+                  <option key={r.id} value={r.id}>{r.icon} {r.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="small-btn"
+                style={{ minWidth: 60 }}
+                onClick={() => playRingtone(clock.ringtoneId)}
+                aria-label={`Preview ${getRingtone(clock.ringtoneId).name}`}
+              >
+                ▶ Play
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="switch-row">
           <span>Enabled</span>

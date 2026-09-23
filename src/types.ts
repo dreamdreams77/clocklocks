@@ -33,6 +33,8 @@ export interface Clock {
   enabled: boolean;
   visibility: ClockVisibility;
   soundEnabled: boolean;
+  /** which ringer plays when this clock becomes ready — see engine/sound.ts RINGTONES */
+  ringtoneId: string;
   colorId: string;
   /** ISO date strings (yyyy-mm-dd) of occurrences the child has already marked "Done" */
   completedDates: string[];

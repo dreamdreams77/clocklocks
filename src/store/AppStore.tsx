@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import type { AppData, AppSettings, Clock, Profile } from '../types';
 import { loadData, saveData } from './persistence';
 import { computeAppState, markOccurrenceDone, startTimer, stopTimer, type AppState } from '../engine/schedule';
 import { toISODate } from '../engine/time';
+import { playRingtone } from '../engine/sound';
 
 type Action =
   | { type: 'ADD_CLOCK'; clock: Clock }
@@ -116,6 +117,30 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'LOG_SLEEP', entries: next.slice(0, 14) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appState.sleepState.mode, appState.sleepState.bedtimeInstant.getTime(), appState.sleepState.wakeInstant.getTime()]);
+
+  // Play each clock's chosen ringer the moment it *becomes* ready — never on every re-render,
+  // and never on first load (so an already-ready clock doesn't blast a sound on app open).
+  const prevStatusesRef = useRef<Map<string, string> | null>(null);
+  useEffect(() => {
+    const nextStatuses = new Map<string, string>();
+    const soundable: Array<{ id: string; status: string; clock: Clock | null }> = [];
+    if (appState.wakeClock && appState.wakeState) {
+      soundable.push({ id: appState.wakeClock.id, status: appState.wakeState.status, clock: appState.wakeClock });
+    }
+    for (const { clock, state } of appState.clockStates) {
+      soundable.push({ id: clock.id, status: state.status, clock });
+    }
+
+    for (const { id, status, clock } of soundable) {
+      nextStatuses.set(id, status);
+      const prevStatus = prevStatusesRef.current?.get(id);
+      const justBecameReady = status === 'ready' && prevStatus != null && prevStatus !== 'ready';
+      if (justBecameReady && data.settings.soundEnabled && clock?.soundEnabled && clock.ringtoneId) {
+        playRingtone(clock.ringtoneId);
+      }
+    }
+    prevStatusesRef.current = nextStatuses;
+  }, [appState, data.settings.soundEnabled]);
 
   const value: StoreValue = {
     data,

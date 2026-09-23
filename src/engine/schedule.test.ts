@@ -17,6 +17,7 @@ function baseClock(overrides: Partial<Clock>): Clock {
     enabled: true,
     visibility: 'child',
     soundEnabled: false,
+    ringtoneId: 'gentleChime',
     colorId: 'blue',
     completedDates: [],
     order: 0,

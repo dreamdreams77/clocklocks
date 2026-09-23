@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../store/AppStore';
 import { getTheme } from '../themes/themes';
-import { computeClockState } from '../engine/schedule';
 import { friendlyClockTime, friendlyDuration } from '../engine/time';
 import { AnalogClock } from './AnalogClock';
 import { ClockCard } from './ClockCard';
@@ -27,7 +26,7 @@ export function ChildHome({ onOpenAdult }: { onOpenAdult: () => void }) {
     [theme.decor],
   );
 
-  const wakeState = appState.wakeClock ? computeClockState(now, appState.wakeClock, appState.sleepState) : null;
+  const wakeState = appState.wakeState;
   const wakeReadyNotDone = wakeState?.status === 'ready';
 
   const childEntries = appState.clockStates.filter((e) => e.clock.visibility === 'child');

@@ -148,6 +148,7 @@ export interface AppState {
   sleepClock: Clock | null;
   wakeClock: Clock | null;
   sleepState: SleepState;
+  wakeState: ClockState | null;
   clockStates: Array<{ clock: Clock; state: ClockState }>;
 }
 
@@ -159,13 +160,14 @@ export function computeAppState(now: Date, clocks: Clock[], profiles: Profile[],
   const sleepState = sleepClock && wakeClock
     ? computeSleepState(now, sleepClock, wakeClock)
     : { mode: 'day' as const, bedtimeInstant: addDays(now, -1), wakeInstant: now, msUntilWake: 0, msSinceWake: 0 };
+  const wakeState = wakeClock ? computeClockState(now, wakeClock, sleepState) : null;
 
   const clockStates = applicable
     .filter((c) => c.role !== 'sleep' && c.role !== 'wakeup')
     .sort((a, b) => a.order - b.order)
     .map((clock) => ({ clock, state: computeClockState(now, clock, sleepState) }));
 
-  return { profile, sleepClock, wakeClock, sleepState, clockStates };
+  return { profile, sleepClock, wakeClock, sleepState, wakeState, clockStates };
 }
 
 export function markOccurrenceDone(clock: Clock, occurrenceKey: string): Clock {

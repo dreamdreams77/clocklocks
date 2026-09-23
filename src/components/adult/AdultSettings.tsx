@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/AppStore';
 import { THEMES } from '../../themes/themes';
+import { RINGTONES, playRingtone } from '../../engine/sound';
 import { hashPin } from '../../store/persistence';
 import { ClockList } from './ClockList';
 import { ProfileEditor } from './ProfileEditor';
@@ -102,6 +103,20 @@ export function AdultSettings({ onExit }: { onExit: () => void }) {
           <span className="switch-knob" />
         </button>
       </div>
+      {data.settings.soundEnabled && (
+        <div style={{ marginBottom: 8 }}>
+          <p className="list-item-sub" style={{ marginBottom: 8 }}>
+            Preview the ringer sounds — pick which one plays per clock when you edit it.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {RINGTONES.filter((r) => r.id !== 'none').map((r) => (
+              <button key={r.id} type="button" className="chip-btn" onClick={() => playRingtone(r.id)}>
+                {r.icon} {r.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="section-title">♿ Accessibility</div>
       <div className="switch-row">
