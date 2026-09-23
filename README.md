@@ -1,37 +1,111 @@
-# Holding You
+# Wake & Wonder — Analog Routine Clocks
 
-**Artist:** Laura Johnston  
-**Duration:** 3:41  
-**Genre:** Original Song
+A child-friendly wall of analog clocks that helps a child understand what
+time it is, what part of the day/night they're in, and when specific things
+(getting up, waking Daddy, breakfast, school…) are allowed to happen. Adults
+control the schedule; the child sees only simple, analog, icon-first clocks.
 
-## About
+Offline-first, no account, everything persisted to `localStorage`.
 
-A song about catching someone mid-spiral, about naming what's hidden, about staying when leaving was easier. About how patterns become patterns, and how vulnerability becomes the bridge between two people.
+## Running it
 
-This is a song about mutual care, about recognition rising, about walls shifting but not breaking. About more love, not less.
+```bash
+npm install
+npm run dev       # start the dev server
+npm run build     # production build (runs the TypeScript project build too)
+npm test          # run the scheduling-engine unit tests once
+npm run test:watch
+```
 
-## Files
+## Architecture
 
-- `holding-you.mp3` - Full song
-- `karaoke.html` - Interactive karaoke version (open in browser)
-- `LYRICS.md` - Complete lyrics and song structure
+- **`src/engine/`** — the pure scheduling core. No React, no I/O, no
+  `setInterval` reliance for correctness: every function takes an explicit
+  `now: Date` and derives state from real timestamps, so answers are correct
+  whether the app has been open continuously or was just reopened after
+  hours closed.
+  - `time.ts` — DST-safe date arithmetic (builds `Date`s from calendar
+    fields instead of adding raw millisecond offsets).
+  - `repeat.ts` — resolves `RepeatRule` (`once` / `daily` / `weekdays` /
+    `weekends` / `custom`) against calendar days.
+  - `schedule.ts` — `computeSleepState` (night/day + overnight & midnight
+    crossing), `computeClockState` (per-clock status for `fixedTime`,
+    `durationFromWake`, and `timer` clocks), and `computeAppState` (ties
+    clocks + routine profiles + sleep state together for the UI).
+  - `schedule.test.ts` — 23 Vitest cases covering every scenario called out
+    in the spec: overnight sleep, post-wake fixed-time clocks computed live
+    from the current time, temporary timers (including "app was closed and
+    reopened"), multiple simultaneous timers, midnight crossing, daily /
+    weekday / weekend / custom repeat rules, disabled clocks, one-off
+    past/future events, `durationFromWake` clocks, and routine-profile
+    selection by day of week.
 
-## Production Notes
+- **`src/types.ts`** — the shared `Clock` model (`id, name, icon, role,
+  scheduleType, time/duration, repeat, enabled, visibility, soundEnabled,
+  completedDates, order, profileIds`), `Profile` (a recurring routine, e.g.
+  "School Day" vs "Weekend"), and `AppSettings`.
 
-**Energy Map:**
-- Intro: Soft, intimate (2/10)
-- Verses: Observational, present (3-4/10)
-- Chorus: Full arrangement, grounded (8-9/10)
-- Bridge: Nearly alone, raw (3/10)
-- Final Chorus: Complete, transformed (10/10)
-- Outro: Returns to silence (1/10)
+- **`src/store/`** — `AppStore.tsx` is a small React context + reducer that
+  owns `AppData` (clocks, profiles, settings, sleep log), recomputes
+  `computeAppState` on a UI-refresh tick (`useNow`, also re-syncs on tab
+  visibility change), and persists to `localStorage` (`persistence.ts`).
+  `defaultData.ts` seeds a ready-to-use schedule (Sleep 9pm → Wake 7am →
+  Daddy 7:30 → Mummy 8:00 → Breakfast 8:15 → Dressed 8:45 → School 9:00,
+  matching the spec's example) plus the clock-type preset list.
 
-The production follows the emotional arc of the song - beginning in vulnerability, building through recognition, breaking down at the rawest moment, then flooding back transformed.
+- **`src/components/`** — `AnalogClock` (SVG face, smooth hand transitions,
+  an arc + marker showing the target time, `reducedMotion`-aware),
+  `ClockCard`, `NextThing`, `TimelineView`, `SleepLogView`, and `ChildHome`
+  (orchestrates the night hero → "You can get up now!" gate → morning clock
+  wall / Next-Thing mode / timeline). `components/adult/` holds the parent
+  lock (`PinLock`), the clock CRUD + reordering UI (`ClockList` +
+  `ClockEditor`, with the preset picker), `ProfileEditor` (recurring
+  routines), and `AdultSettings` (theme, display, accessibility, PIN).
 
-## Listen
+- **`src/themes/themes.ts`** — 9 child-friendly themes (Moon & Stars, Sunny
+  Morning, Dinosaurs, Magical, Sleepy Bear, Space, Forest, Dragons,
+  Rainbow), each a set of CSS custom properties applied to `:root`
+  (`applyThemeVars`), with a night/day background swap.
 
-Play `holding-you.mp3` in your preferred audio player.
+- **`src/styles/global.css`** — layout, cards, the parent-lock keypad, and
+  accessibility hooks (`data-reduced-motion`, `data-large-text`,
+  `data-contrast`, `:focus-visible` rings, large touch targets throughout).
 
----
+## Clock types
 
-*This is how survival tastes.*
+- **Sleep** / **Wake-up** — the two clocks that gate night vs. day mode.
+- **Fixed time** — "Wake Daddy at 7:30" — computed live from the current
+  time on every render, so reopening the app mid-morning shows the correct
+  remaining minutes rather than restarting a countdown.
+- **Duration from wake** — "30 minutes after getting up," anchored to the
+  actual wake moment (previewed but not counted down while still asleep).
+- **Timer** — an ad-hoc countdown an adult starts from "now" (e.g. "wait 20
+  minutes"), independent of the daily schedule.
+
+Repeat rules (`once` with a specific date / `daily` / `weekdays` /
+`weekends` / `custom` days) apply to any of the above. Recurring **routine
+profiles** (e.g. School Day vs. Weekend vs. Nap) give different days their
+own bedtime/wake/clocks; the active profile is auto-picked by day of week,
+or the adult can pin one in Settings.
+
+## Tests
+
+`npm test` runs `src/engine/schedule.test.ts` — 23 passing cases (overnight
+sleep, post-wake countdowns computed from real elapsed time, temporary
+timers surviving an app close/reopen, multiple simultaneous timers,
+midnight crossing, every repeat kind, disabled/past/future one-offs,
+`durationFromWake`, and routine-profile selection).
+
+## Known limitations / follow-ups
+
+- The parent PIN uses a simple non-cryptographic hash — it's a
+  speed-bump for little fingers, not a real security boundary.
+- Sounds are wired into the data model (`soundEnabled`) but no audio
+  assets are bundled; hook up an `<audio>` element in `ChildHome`/`ClockCard`
+  when you have gentle chime assets to ship.
+- Drag-and-drop reordering works with mouse/HTML5 DnD and always has
+  accessible ↑/↓ button fallbacks (touch drag-and-drop is inherently
+  inconsistent across mobile browsers).
+
+The original "Holding You" song/karaoke page that used to live at the repo
+root has been moved to `legacy/` and is unrelated to this app.
