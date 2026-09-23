@@ -7,6 +7,7 @@ import { ClockCard } from './ClockCard';
 import { NextThing } from './NextThing';
 import { TimelineView } from './TimelineView';
 import { SleepLogView } from './SleepLogView';
+import { InstallBanner } from './InstallBanner';
 
 export function ChildHome({ onOpenAdult }: { onOpenAdult: () => void }) {
   const { data, now, appState, markDone, startTimerFor } = useStore();
@@ -55,6 +56,8 @@ export function ChildHome({ onOpenAdult }: { onOpenAdult: () => void }) {
         <span style={{ fontSize: '1.6rem' }} aria-hidden="true">{theme.icon}</span>
         <button className="icon-btn" onClick={onOpenAdult} aria-label="Grown-up settings">🔒</button>
       </div>
+
+      <InstallBanner />
 
       {appState.sleepState.mode === 'night' ? (
         <NightHero now={now} sleepClock={appState.sleepClock} wakeInstant={appState.sleepState.wakeInstant} msUntilWake={appState.sleepState.msUntilWake} reducedMotion={reducedMotion} faceStyle={faceStyle} />
